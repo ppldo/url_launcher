@@ -38,7 +38,7 @@ class UrlLauncher {
       Intent intent = new Intent(Intent.ACTION_VIEW);
       intent.setData(Uri.parse("https://www.un-existing-site-i-think.com"));
       PackageManager pm = context.getPackageManager();
-      List<ResolveInfo> browserList = pm.queryIntentActivities(intent, 0);
+      List<ResolveInfo> browserList = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
       for (ResolveInfo info : browserList) {
         browserPackageName.add(info.activityInfo.packageName);
       }
@@ -57,9 +57,14 @@ class UrlLauncher {
     Intent launchIntent = new Intent(Intent.ACTION_VIEW);
     launchIntent.setData(Uri.parse(url));
     ActivityInfo info =
-        launchIntent.resolveActivityInfo(applicationContext.getPackageManager(), 0);
-
-    return info != null && (!forbidBrowser || this.browsers.contains(info.packageName));
+        launchIntent.resolveActivityInfo(applicationContext.getPackageManager(), PackageManager.MATCH_DEFAULT_ONLY);
+    if (info == null) {
+      return false;
+    }
+    if (forbidBrowser) {
+      return !this.browsers.contains(info.packageName);
+    }
+    return true;
   }
 
   /**
