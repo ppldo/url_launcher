@@ -1,25 +1,23 @@
+// Copyright 2013 The Flutter Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package io.flutter.plugins.urllauncher;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Browser;
 import androidx.annotation.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /** Launches components for URLs. */
 class UrlLauncher {
   private final Context applicationContext;
   @Nullable private Activity activity;
-  private final List<String> browsers;
 
   /**
    * Uses the given {@code applicationContext} for launching intents.
@@ -29,23 +27,6 @@ class UrlLauncher {
   UrlLauncher(Context applicationContext, @Nullable Activity activity) {
     this.applicationContext = applicationContext;
     this.activity = activity;
-    this.browsers = getListOfBrowser(applicationContext);
-  }
-
-  public static List<String> getListOfBrowser(Context context) {
-    List<String> browserPackageName = new ArrayList<String>();
-    try {
-      Intent intent = new Intent(Intent.ACTION_VIEW);
-      intent.setData(Uri.parse("https://www.un-existing-site-i-think.com"));
-      PackageManager pm = context.getPackageManager();
-      List<ResolveInfo> browserList = pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-      for (ResolveInfo info : browserList) {
-        browserPackageName.add(info.activityInfo.packageName);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    return browserPackageName;
   }
 
   void setActivity(@Nullable Activity activity) {
@@ -53,18 +34,15 @@ class UrlLauncher {
   }
 
   /** Returns whether the given {@code url} resolves into an existing component. */
-  boolean canLaunch(String url, boolean forbidBrowser) {
+  boolean canLaunch(String url) {
     Intent launchIntent = new Intent(Intent.ACTION_VIEW);
     launchIntent.setData(Uri.parse(url));
-    ActivityInfo info =
-        launchIntent.resolveActivityInfo(applicationContext.getPackageManager(), PackageManager.MATCH_DEFAULT_ONLY);
-    if (info == null) {
-      return false;
-    }
-    if (forbidBrowser) {
-      return !this.browsers.contains(info.packageName);
-    }
-    return true;
+    ComponentName componentName =
+        launchIntent.resolveActivity(applicationContext.getPackageManager());
+
+    return componentName != null
+        && !"{com.android.fallback/com.android.fallback.Fallback}"
+            .equals(componentName.toShortString());
   }
 
   /**
@@ -83,14 +61,9 @@ class UrlLauncher {
       Bundle headersBundle,
       boolean useWebView,
       boolean enableJavaScript,
-      boolean enableDomStorage,
-      boolean forbidBrowser) {
+      boolean enableDomStorage) {
     if (activity == null) {
       return LaunchStatus.NO_ACTIVITY;
-    }
-
-    if (!this.canLaunch(url, forbidBrowser)) {
-      return LaunchStatus.ACTIVITY_NOT_FOUND;
     }
 
     Intent launchIntent;

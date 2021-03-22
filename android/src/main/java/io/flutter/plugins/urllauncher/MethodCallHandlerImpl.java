@@ -1,3 +1,7 @@
+// Copyright 2013 The Flutter Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 package io.flutter.plugins.urllauncher;
 
 import android.os.Bundle;
@@ -77,27 +81,22 @@ final class MethodCallHandlerImpl implements MethodCallHandler {
   }
 
   private void onCanLaunch(Result result, String url) {
-    result.success(urlLauncher.canLaunch(url, false));
+    result.success(urlLauncher.canLaunch(url));
   }
 
   private void onLaunch(MethodCall call, Result result, String url) {
     final boolean useWebView = call.argument("useWebView");
     final boolean enableJavaScript = call.argument("enableJavaScript");
     final boolean enableDomStorage = call.argument("enableDomStorage");
-    final boolean forbidBrowser = call.argument("universalLinksOnly");
     final Map<String, String> headersMap = call.argument("headers");
     final Bundle headersBundle = extractBundle(headersMap);
 
     LaunchStatus launchStatus =
-        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage, forbidBrowser);
+        urlLauncher.launch(url, headersBundle, useWebView, enableJavaScript, enableDomStorage);
 
     if (launchStatus == LaunchStatus.NO_ACTIVITY) {
       result.error("NO_ACTIVITY", "Launching a URL requires a foreground activity.", null);
     } else if (launchStatus == LaunchStatus.ACTIVITY_NOT_FOUND) {
-      if (forbidBrowser) {
-        result.success(false);
-        return;
-      }
       result.error(
           "ACTIVITY_NOT_FOUND",
           String.format("No Activity found to handle intent { %s }", url),
